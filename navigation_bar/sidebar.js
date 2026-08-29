@@ -2,10 +2,6 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSidebar();
 });
 
-/* =========================================================
-   LOAD SIDEBAR
-   ========================================================= */
-
 async function loadSidebar(activePageKey) {
   const container = document.getElementById("sidebar-container");
 
@@ -23,12 +19,7 @@ async function loadSidebar(activePageKey) {
     const html = await response.text();
 
     const tempDiv = document.createElement("div");
-
     tempDiv.innerHTML = html;
-
-    /* =====================================================
-       REMOVE LOGOUT MODAL FROM SIDEBAR CONTAINER
-       ===================================================== */
 
     const logoutModal = tempDiv.querySelector("#logoutModalBackdrop");
 
@@ -36,27 +27,13 @@ async function loadSidebar(activePageKey) {
       logoutModal.remove();
     }
 
-    /* Insert sidebar */
-
     container.innerHTML = tempDiv.innerHTML;
-
-    /* =====================================================
-       LOAD ACTIVE STAFF
-       ===================================================== */
-
-    loadActiveStaffProfile();
-
-    /* =====================================================
-       ADD LOGOUT MODAL TO BODY
-       ===================================================== */
 
     if (!document.getElementById("logoutModalBackdrop") && logoutModal) {
       document.body.appendChild(logoutModal);
     }
 
-    /* =====================================================
-       DETERMINE CURRENT PAGE
-       ===================================================== */
+    loadActiveStaffProfile();
 
     let pageKey = activePageKey;
 
@@ -78,10 +55,6 @@ async function loadSidebar(activePageKey) {
       }
     }
 
-    /* =====================================================
-       APPLY ACTIVE PAGE
-       ===================================================== */
-
     if (pageKey) {
       const activeLink = container.querySelector(`[data-page="${pageKey}"]`);
 
@@ -90,97 +63,110 @@ async function loadSidebar(activePageKey) {
       }
     }
 
-    /* =====================================================
-       APPLY SIDEBAR STATE
-       ===================================================== */
-
     applySavedSidebarState();
-
-    /* =====================================================
-       INITIALIZE SIDEBAR EVENTS
-       ===================================================== */
-
     initSidebarLogic();
   } catch (error) {
     console.error("Failed to load sidebar navigation:", error);
   }
 }
 
-/* =========================================================
-   LOAD ACTIVE STAFF PROFILE
-   ========================================================= */
+function getCurrentUser() {
+  try {
+    return JSON.parse(localStorage.getItem("currentUser"));
+  } catch (error) {
+    return null;
+  }
+}
+
+function getInitials(name) {
+  if (!name) {
+    return "ST";
+  }
+
+  const cleanName = String(name).trim();
+
+  if (!cleanName) {
+    return "ST";
+  }
+
+  const parts = cleanName.split(/\s+/);
+
+  if (parts.length === 1) {
+    return parts[0].substring(0, 2).toUpperCase();
+  }
+
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
 
 function loadActiveStaffProfile() {
-  const staffName = document.getElementById("activeStaffName");
+  const nameEl = document.getElementById("activeStaffName");
+  const imageEl = document.getElementById("activeStaffImage");
+  const initialsEl = document.getElementById("activeStaffInitials");
 
-  const staffImage = document.getElementById("activeStaffImage");
-
-  const staffInitials = document.getElementById("activeStaffInitials");
-
-  if (!staffName) {
+  if (!nameEl) {
     return;
   }
 
-  /*
-   * Current logged-in staff.
-   *
-   * This can later be connected
-   * to your database/session.
-   */
+  const currentUser = getCurrentUser();
 
-  const activeStaff = {
-    name: "Erwin Jacaba",
+  if (!currentUser) {
+    nameEl.textContent = "Staff";
 
-    initials: "EJ",
+    if (imageEl) {
+      imageEl.style.display = "none";
+    }
 
-    image: "",
-  };
+    if (initialsEl) {
+      initialsEl.textContent = "ST";
+      initialsEl.style.display = "flex";
+    }
 
-  /* =====================================================
-     STAFF NAME
-     ===================================================== */
+    return;
+  }
 
-  staffName.textContent = activeStaff.name;
+  const firstname = currentUser.firstname || currentUser.firstName || "";
 
-  /* =====================================================
-     STAFF IMAGE
-     ===================================================== */
+  const lastname = currentUser.lastname || currentUser.lastName || "";
 
-  if (activeStaff.image && staffImage) {
-    staffImage.src = activeStaff.image;
+  const fullName =
+    currentUser.name ||
+    currentUser.full_name ||
+    `${firstname} ${lastname}`.trim();
 
-    staffImage.style.display = "block";
+  const initials = getInitials(fullName);
 
-    if (staffInitials) {
-      staffInitials.style.display = "none";
+  nameEl.textContent = fullName || "Staff";
+
+  if (currentUser.profileImage && imageEl) {
+    imageEl.src = currentUser.profileImage;
+    imageEl.style.display = "block";
+
+    if (initialsEl) {
+      initialsEl.textContent = initials;
+      initialsEl.style.display = "none";
     }
   } else {
-    if (staffImage) {
-      staffImage.style.display = "none";
+    if (imageEl) {
+      imageEl.removeAttribute("src");
+      imageEl.style.display = "none";
     }
 
-    if (staffInitials) {
-      staffInitials.textContent = activeStaff.initials;
-
-      staffInitials.style.display = "block";
+    if (initialsEl) {
+      initialsEl.textContent = initials;
+      initialsEl.style.display = "flex";
     }
   }
 }
 
-/* =========================================================
-   APPLY SAVED SIDEBAR STATE
-   ========================================================= */
-
 function applySavedSidebarState() {
   const sidebar = document.getElementById("sidebar");
-
   const toggleIcon = document.getElementById("toggleIcon");
-
-  const savedState = localStorage.getItem("sidebarState");
 
   if (!sidebar) {
     return;
   }
+
+  const savedState = localStorage.getItem("sidebarState");
 
   if (window.innerWidth > 768) {
     if (savedState === "collapsed") {
@@ -199,24 +185,12 @@ function applySavedSidebarState() {
   }
 }
 
-/* =========================================================
-   SIDEBAR LOGIC
-   ========================================================= */
-
 function initSidebarLogic() {
   const sidebar = document.getElementById("sidebar");
-
   const sidebarToggle = document.getElementById("sidebarToggle");
-
   const toggleIcon = document.getElementById("toggleIcon");
-
   const sidebarOverlay = document.getElementById("sidebarOverlay");
-
   const mobileMenuToggle = document.getElementById("mobileMenuToggle");
-
-  /* =======================================================
-     DESKTOP TOGGLE
-     ======================================================= */
 
   if (sidebarToggle && sidebar) {
     sidebarToggle.addEventListener("click", () => {
@@ -238,10 +212,6 @@ function initSidebarLogic() {
     });
   }
 
-  /* =======================================================
-     MOBILE MENU
-     ======================================================= */
-
   if (mobileMenuToggle && sidebar) {
     mobileMenuToggle.addEventListener("click", () => {
       sidebar.classList.toggle("mobile-open");
@@ -252,35 +222,34 @@ function initSidebarLogic() {
     });
   }
 
-  /* =======================================================
-     MOBILE OVERLAY
-     ======================================================= */
-
   if (sidebarOverlay) {
     sidebarOverlay.addEventListener("click", () => {
       sidebar.classList.remove("mobile-open");
-
       sidebarOverlay.classList.remove("active");
+    });
+  }
+
+  const profileTrigger = document.getElementById("activeStaffProfileTrigger");
+
+  if (profileTrigger) {
+    profileTrigger.addEventListener("click", (event) => {
+      event.preventDefault();
+
+      if (typeof window.openProfileModal === "function") {
+        window.openProfileModal();
+      } else {
+        console.warn("openProfileModal() is not available yet.");
+      }
     });
   }
 }
 
-/* =========================================================
-   GLOBAL LOGOUT MODAL
-   ========================================================= */
-
 document.addEventListener("click", (e) => {
   const logoutBtn = e.target.closest(".btn-logout");
-
   const cancelBtn = e.target.closest("#logoutCancelBtn");
-
   const confirmBtn = e.target.closest("#logoutConfirmBtn");
 
   const backdrop = document.getElementById("logoutModalBackdrop");
-
-  /* =====================================================
-       OPEN MODAL
-       ===================================================== */
 
   if (logoutBtn) {
     e.preventDefault();
@@ -290,10 +259,6 @@ document.addEventListener("click", (e) => {
     }
   }
 
-  /* =====================================================
-       CANCEL LOGOUT
-       ===================================================== */
-
   if (cancelBtn) {
     e.preventDefault();
 
@@ -302,14 +267,11 @@ document.addEventListener("click", (e) => {
     }
   }
 
-  /* =====================================================
-       CONFIRM LOGOUT
-       ===================================================== */
-
   if (confirmBtn) {
     e.preventDefault();
 
     localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("currentUser");
 
     window.location.href = "../../homepage/homepage.html";
   }
